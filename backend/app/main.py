@@ -5,12 +5,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.database import ASYNCPG_URL, init_db
+from app.seed import seed_users
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("HR Q&A Agent API — startup complete")
+    print("HR Q&A Agent API — starting up...")
+    await init_db()
+    await seed_users()
     yield
+    print("Shutting down...")
 
 
 app = FastAPI(
@@ -32,7 +37,7 @@ async def health():
     # Test database connectivity
     db_status = "disconnected"
     try:
-        conn = await asyncpg.connect(settings.DATABASE_URL)
+        conn = await asyncpg.connect(ASYNCPG_URL)
         await conn.close()
         db_status = "connected"
     except Exception:

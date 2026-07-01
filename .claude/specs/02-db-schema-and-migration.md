@@ -131,7 +131,7 @@ Enable the `vector` extension before creating any tables.
 |--------|------|-------------|-------------|
 | `id` | `UUID` | `PRIMARY KEY`, `DEFAULT gen_random_uuid()` | Unique chunk identifier |
 | `content` | `TEXT` | `NOT NULL` | Text chunk content |
-| `embedding` | `VECTOR(768)` | `NOT NULL` | Gemini `text-embedding-004` vector (768 dimensions) |
+| `embedding` | `VECTOR(768)` | `NOT NULL` | Gemini `gemini-embedding-001` vector (768 dimensions) |
 | `source` | `VARCHAR(500)` | `NOT NULL` | Original document filename |
 | `page` | `INTEGER` | `NULLABLE` | Page number in source document |
 | `section` | `VARCHAR(500)` | `NULLABLE` | Section title or heading |
