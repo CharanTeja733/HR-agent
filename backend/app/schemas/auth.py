@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, field_validator
 
-from app.schemas import UserResponse, UserRole
+from app.schemas.common import UserRole
+from app.schemas.user import UserResponse
 
 
 class UserRegister(BaseModel):

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User
-from app.auth.utils import decode_token, verify_token_type
+from app.core.security import decode_token, verify_token_type
 
 logger = logging.getLogger(__name__)
 

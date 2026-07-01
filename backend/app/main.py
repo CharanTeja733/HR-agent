@@ -6,10 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jose import JWTError
 
-from app.auth.router import router as auth_router
+from app.api.v1 import v1_router
 from app.config import settings
 from app.database import ASYNCPG_URL, init_db
-from app.seed import seed_users
+from app.utils.seed import seed_users
 
 
 @asynccontextmanager
@@ -38,7 +38,7 @@ app.add_middleware(
 # Auth router
 # ---------------------------------------------------------------------------
 
-app.include_router(auth_router)
+app.include_router(v1_router)
 
 
 # ---------------------------------------------------------------------------
