@@ -158,6 +158,15 @@ Hello {user_name}! I'm your HR assistant. I can help you with questions about:
 
 What would you like to know?"""
 
+THANKS_RESPONSE = """\
+You're welcome, {user_name}! Let me know if you have any other HR questions — I'm here to help."""
+
+BYE_RESPONSE = """\
+Goodbye, {user_name}! Feel free to reach out anytime you have HR questions. Have a great day!"""
+
+GREETING_BACK_RESPONSE = """\
+Hello, {user_name}! How can I help you with your HR questions today?"""
+
 
 BOT_QUESTION_RESPONSE = """\
 I'm an AI-powered HR assistant designed to help employees find information \

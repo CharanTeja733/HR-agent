@@ -421,6 +421,24 @@ class GeminiService:
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             top_p=top_p,
+            safety_settings=[
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+            ],
         )
 
         logger.debug(
@@ -495,9 +513,28 @@ class GeminiService:
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             top_p=top_p,
+            safety_settings=[
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                ),
+            ],
         )
 
         queue: asyncio.Queue[str | None] = asyncio.Queue()
+        stream_error: list[Exception] = []  # capture error from thread
 
         def _stream_runner() -> None:
             """Run the synchronous stream in a thread, pushing tokens into
@@ -510,8 +547,9 @@ class GeminiService:
                 ):
                     if chunk.text:
                         queue.put_nowait(chunk.text)
-            except Exception:
+            except Exception as exc:
                 logger.exception("Gemini streaming error — stream truncated")
+                stream_error.append(exc)
             finally:
                 queue.put_nowait(None)  # sentinel
 
@@ -525,6 +563,10 @@ class GeminiService:
             if token is None:
                 break
             yield token
+
+        # If the stream failed, raise the error so callers can handle it
+        if stream_error:
+            raise stream_error[0]
 
     # ------------------------------------------------------------------
     # Public — classification

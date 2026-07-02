@@ -3,155 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HR Q&A Agent — Ask questions about company policies, benefits, and procedures">
+    <meta name="theme-color" content="#2563EB">
     <title>HR Q&A Agent</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 2.5rem;
-            max-width: 480px;
-            width: 90%;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
-        }
-        h1 {
-            font-size: 1.75rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            color: #f1f5f9;
-        }
-        .status-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        .status-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #334155;
-            padding: 0.875rem 1.25rem;
-            border-radius: 8px;
-        }
-        .status-label {
-            font-weight: 500;
-            color: #94a3b8;
-        }
-        .status-value {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .dot.green  { background: #22c55e; }
-        .dot.red    { background: #ef4444; }
-        .dot.yellow { background: #eab308; }
-        .loading {
-            text-align: center;
-            color: #64748b;
-            padding: 1rem;
-        }
-        .error {
-            color: #ef4444;
-            text-align: center;
-            padding: 1rem 0;
-        }
-        .overall {
-            text-align: center;
-            margin-bottom: 1rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        .overall.healthy  { background: #166534; color: #86efac; }
-        .overall.unhealthy { background: #7f1d1d; color: #fca5a5; }
-        .overall.degraded { background: #713f12; color: #fde68a; }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563EB'/><text x='50' y='68' font-size='50' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='white'>HR</text></svg>" type="image/svg+xml">
 </head>
 <body>
-    <div class="container">
-        <h1>HR Q&A Agent</h1>
-        <div id="loading" class="loading">Connecting to backend...</div>
-        <div id="error" class="error" style="display:none;"></div>
-        <div id="dashboard" style="display:none;">
-            <div id="overall" class="overall"></div>
-            <div class="status-grid">
-                <div class="status-row">
-                    <span class="status-label">Backend Health</span>
-                    <span id="backendStatus" class="status-value"></span>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-relevant="additions"></div>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner hidden" role="alert">&#x26A0; You are offline. Reconnecting...</div>
+
+    <!-- ======================================================================
+         LOGIN PAGE
+         ====================================================================== -->
+    <div id="login-page" class="auth-page">
+
+        <div class="auth-card">
+
+            <div class="auth-header">
+                <div class="auth-logo" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
                 </div>
-                <div class="status-row">
-                    <span class="status-label">Database</span>
-                    <span id="dbStatus" class="status-value"></span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Gemini API</span>
-                    <span id="geminiStatus" class="status-value"></span>
-                </div>
+                <h1>HR Q&A Agent</h1>
+                <p class="auth-subtitle">Ask questions about company policies</p>
             </div>
+
+            <!-- Error / Success Messages -->
+            <div id="auth-error" class="auth-error hidden" role="alert"></div>
+            <div id="auth-success" class="auth-success hidden" role="status"></div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form" novalidate autocomplete="on">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" name="email" required autocomplete="email"
+                           placeholder="you@company.com" aria-describedby="email-error">
+                    <span id="email-error" class="field-error hidden" role="alert"></span>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" required autocomplete="current-password"
+                           placeholder="Enter your password" aria-describedby="password-error">
+                    <span id="password-error" class="field-error hidden" role="alert"></span>
+                </div>
+                <button type="submit" id="login-btn" class="btn btn-primary btn-full">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-spinner hidden" aria-hidden="true"></span>
+                </button>
+            </form>
+
+            <p class="auth-toggle">
+                Don't have an account?
+                <a href="#" id="show-register" role="button" aria-label="Switch to registration form">Register</a>
+            </p>
+
+            <!-- Registration Form (hidden by default) -->
+            <div id="register-section" class="auth-section hidden">
+                <hr class="auth-divider">
+                <h2 style="text-align:center;font-size:18px;margin-bottom:20px;">Create Account</h2>
+
+                <form id="register-form" class="auth-form" novalidate>
+                    <div class="form-group">
+                        <label for="reg-name">Full Name</label>
+                        <input type="text" id="reg-name" name="full_name" required autocomplete="name"
+                               placeholder="Jane Doe" minlength="2">
+                        <span class="field-error hidden"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" name="email" required autocomplete="email"
+                               placeholder="you@company.com">
+                        <span class="field-error hidden"></span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reg-department">Department</label>
+                            <select id="reg-department" name="department" required>
+                                <option value="">Select...</option>
+                                <option value="engineering">Engineering</option>
+                                <option value="sales">Sales</option>
+                                <option value="hr">HR</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="finance">Finance</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-role">Role</label>
+                            <select id="reg-role" name="role" required>
+                                <option value="employee">Employee</option>
+                                <option value="manager">Manager</option>
+                                <option value="hr_admin">HR Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" name="password" required minlength="8"
+                               placeholder="Min. 8 characters, upper, lower, digit" autocomplete="new-password">
+                        <span class="field-error hidden"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-confirm">Confirm Password</label>
+                        <input type="password" id="reg-confirm" name="confirm_password" required
+                               placeholder="Re-enter password" autocomplete="new-password">
+                        <span class="field-error hidden"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span class="btn-text">Create Account</span>
+                        <span class="btn-spinner hidden" aria-hidden="true"></span>
+                    </button>
+                </form>
+
+                <p class="auth-toggle">
+                    Already have an account?
+                    <a href="#" id="show-login" role="button" aria-label="Switch to login form">Sign In</a>
+                </p>
+            </div>
+
         </div>
     </div>
 
-    <script>
-        async function fetchHealth() {
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-            const dashboard = document.getElementById('dashboard');
 
-            try {
-                const response = await fetch('http://backend:8000/health');
-                const data = await response.json();
+    <!-- ======================================================================
+         CHAT PAGE (hidden initially)
+         ====================================================================== -->
+    <div id="chat-page" class="app-layout hidden">
 
-                loading.style.display = 'none';
-                error.style.display = 'none';
-                dashboard.style.display = 'block';
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="sidebar" role="navigation" aria-label="Chat sessions">
 
-                // Overall status
-                const overall = document.getElementById('overall');
-                overall.className = 'overall ' + data.status;
-                overall.textContent = 'Status: ' + data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            <!-- User Info -->
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+                    <div class="user-details">
+                        <span class="user-name" id="user-name">User</span>
+                        <span class="user-role-badge role-employee" id="user-role-badge">Employee</span>
+                        <span class="user-dept" id="user-dept"></span>
+                    </div>
+                </div>
+            </div>
 
-                // Backend status
-                document.getElementById('backendStatus').innerHTML =
-                    '<span class="dot ' + (data.status === 'unhealthy' ? 'red' : 'green') + '"></span> ' +
-                    (data.status === 'healthy' ? 'Running' : data.status);
+            <!-- New Chat Button -->
+            <button id="new-chat-btn" class="btn btn-primary sidebar-btn" aria-label="Start a new chat">
+                <span class="btn-icon">+</span> New Chat
+            </button>
 
-                // Database status
-                document.getElementById('dbStatus').innerHTML =
-                    '<span class="dot ' + (data.database === 'connected' ? 'green' : 'red') + '"></span> ' +
-                    data.database.charAt(0).toUpperCase() + data.database.slice(1);
+            <div class="sidebar-section-label">Recent Conversations</div>
 
-                // Gemini API status
-                const geminiOk = data.gemini_api === 'configured';
-                document.getElementById('geminiStatus').innerHTML =
-                    '<span class="dot ' + (geminiOk ? 'green' : 'yellow') + '"></span> ' +
-                    data.gemini_api.charAt(0).toUpperCase() + data.gemini_api.slice(1);
+            <!-- Session List -->
+            <div id="session-list" class="sidebar-sessions" role="list" aria-label="Conversation history">
+                <!-- Dynamically populated by sessions.js -->
+            </div>
 
-            } catch (err) {
-                loading.style.display = 'none';
-                dashboard.style.display = 'none';
-                error.style.display = 'block';
-                error.textContent = 'Unable to connect to backend. Is the server running?';
-            }
-        }
+            <!-- Logout Footer -->
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-danger sidebar-btn btn-full" aria-label="Sign out">
+                    Log Out
+                </button>
+            </div>
+        </aside>
 
-        fetchHealth();
-    </script>
+        <!-- Sidebar Overlay (mobile) -->
+        <div id="sidebar-overlay" class="sidebar-overlay hidden" aria-hidden="true"></div>
+
+        <!-- MAIN CHAT AREA -->
+        <main class="chat-area" role="main">
+
+            <!-- Chat Header -->
+            <header class="chat-header">
+                <button id="hamburger-btn" class="hamburger-btn" aria-label="Toggle sidebar menu" aria-expanded="true">
+                    <span></span><span></span><span></span>
+                </button>
+                <span id="chat-header-title" class="chat-header-title">HR Q&A Agent</span>
+            </header>
+
+            <!-- Messages -->
+            <div id="chat-messages" class="chat-messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions">
+                <!-- Welcome message inserted by chat.js on load -->
+            </div>
+
+            <!-- Input Bar -->
+            <div id="input-bar" class="input-bar">
+                <form id="chat-form" class="input-form" autocomplete="off">
+                    <textarea id="chat-input" class="chat-input"
+                              placeholder="Ask a question about HR policies..."
+                              rows="1" maxlength="2000"
+                              aria-label="Type your question"
+                              aria-describedby="input-help char-count"></textarea>
+                    <button type="submit" id="send-btn" class="btn btn-primary send-btn"
+                            disabled aria-label="Send message">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+                <div class="input-footer">
+                    <span id="char-count" class="char-count" aria-live="polite"></span>
+                    <span id="input-help" class="input-help">Enter to send &middot; Shift+Enter for new line</span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ======================================================================
+         SCRIPTS (loaded in dependency order — do NOT reorder)
+         ====================================================================== -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/streaming.js"></script>
+    <script src="js/sessions.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+
 </body>
 </html>

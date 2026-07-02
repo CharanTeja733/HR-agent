@@ -26,8 +26,10 @@ from app.core.exceptions import (
 from app.models.models import User
 from app.prompts.rag import (
     BOT_QUESTION_RESPONSE,
+    BYE_RESPONSE,
     CONFIDENCE_NOTE_MEDIUM,
     CONTEXT_CHUNK_TEMPLATE,
+    GREETING_BACK_RESPONSE,
     GREETING_TEMPLATE,
     HARD_FALLBACK_RESPONSE,
     HISTORY_EMPTY,
@@ -35,6 +37,7 @@ from app.prompts.rag import (
     OUT_OF_DOMAIN_RESPONSE,
     SOFT_FALLBACK_TEMPLATE,
     SYSTEM_PROMPT,
+    THANKS_RESPONSE,
     USER_PROMPT_TEMPLATE,
 )
 from app.repositories.message import MessageRepository
@@ -113,7 +116,7 @@ class RAGService:
             # --- Route: direct (non-retrieval) ---------------------------
             if not classification_result["requires_retrieval"]:
                 direct_response = self._get_direct_response(
-                    classification, user.full_name
+                    classification, user.full_name, query
                 )
                 # Stream the direct response token by token
                 for token in self._tokenize(direct_response):
@@ -316,7 +319,7 @@ class RAGService:
 
         # Route: direct response
         if not classification_result["requires_retrieval"]:
-            answer = self._get_direct_response(classification, user.full_name)
+            answer = self._get_direct_response(classification, user.full_name, query)
             t0 = time.time()
             store = await self._store_messages(
                 user_id=user.id,
@@ -667,15 +670,52 @@ class RAGService:
         related = "\n".join(excerpts) if excerpts else "(No related excerpts found)"
         return SOFT_FALLBACK_TEMPLATE.format(related_excerpts=related)
 
-    def _get_direct_response(self, classification: str, user_name: str) -> str:
-        """Return the pre-built response for non-retrieval classifications."""
+    def _get_direct_response(self, classification: str, user_name: str, query: str = "") -> str:
+        """Return the pre-built response for non-retrieval classifications.
+
+        For greetings, inspects the actual message to give a natural reply
+        (e.g. "thanks" → "You're welcome!" instead of the full welcome message).
+        """
         if classification == "greeting_only":
-            return GREETING_TEMPLATE.format(user_name=user_name)
+            return self._pick_greeting_response(query, user_name)
         elif classification == "bot_question":
             return BOT_QUESTION_RESPONSE
         elif classification == "out_of_domain":
             return OUT_OF_DOMAIN_RESPONSE
         # Fallback — should never happen as classifier validates output
+        return GREETING_TEMPLATE.format(user_name=user_name)
+
+    def _pick_greeting_response(self, query: str, user_name: str) -> str:
+        """Select the appropriate greeting response based on the message content."""
+        import re
+        msg = query.strip().lower()
+
+        # Thanks / appreciation → simple acknowledgment
+        thanks_patterns = [
+            r"^(thanks|thank\s*you|thx|ty|tyvm|cheers|appreciate\s*it|much\s*appreciated)",
+            r"\b(thanks|thank\s*you)\b",
+        ]
+        for pat in thanks_patterns:
+            if re.search(pat, msg):
+                return THANKS_RESPONSE.format(user_name=user_name)
+
+        # Bye / goodbye → farewell
+        bye_patterns = [
+            r"^(bye|goodbye|see\s*you|cya|later|good\s*night|have\s*a\s*good\s*(day|one))",
+        ]
+        for pat in bye_patterns:
+            if re.search(pat, msg):
+                return BYE_RESPONSE.format(user_name=user_name)
+
+        # Short greeting (hi, hello, hey, good morning) → brief greeting back
+        short_greeting_patterns = [
+            r"^(hey|heya|yo|sup|howdy|good\s*morning|good\s*afternoon|good\s*evening)",
+        ]
+        for pat in short_greeting_patterns:
+            if re.search(pat, msg):
+                return GREETING_BACK_RESPONSE.format(user_name=user_name)
+
+        # Default: full welcome (for "hi", "hello", or first interaction)
         return GREETING_TEMPLATE.format(user_name=user_name)
 
     # ------------------------------------------------------------------

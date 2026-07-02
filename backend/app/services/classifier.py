@@ -7,6 +7,7 @@ to handle mixed intents, multilingual queries, and edge cases.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Optional
 
@@ -95,10 +96,28 @@ class ClassifierService:
             )
         except Exception as e:
             logger.error("Classification failed: %s", e)
-            raise ClassificationError(
-                f"Failed to classify message: {e}",
-                original_error=e,
+            # Fallback: use heuristic classification instead of crashing
+            classification, confidence = self._heuristic_classify(message)
+            logger.warning(
+                "Using heuristic fallback for classification: %s (confidence=%.2f)",
+                classification,
+                confidence,
             )
+            requires_retrieval = classification in ("follow_up", "hr_question")
+            requires_rewriting = classification == "follow_up"
+            action = CLASSIFICATION_ACTIONS.get(classification, "retrieve")
+            direct_response = DIRECT_RESPONSES.get(classification)
+            elapsed_ms = (time.time() - start_time) * 1000
+            return {
+                "message": message,
+                "classification": classification,
+                "confidence": confidence,
+                "requires_retrieval": requires_retrieval,
+                "requires_rewriting": requires_rewriting,
+                "action": action,
+                "direct_response": direct_response,
+                "processing_time_ms": round(elapsed_ms, 2),
+            }
 
         # Guard against None response (e.g. content blocked by safety filter)
         if raw_response is None:
@@ -255,3 +274,61 @@ class ClassifierService:
             raw_response[:100],
         )
         return "hr_question", 0.5
+
+    def _heuristic_classify(self, message: str) -> tuple[str, float]:
+        """Rule-based fallback classification when Gemini is unavailable.
+
+        Uses simple pattern matching for common cases — avoids crashing
+        the pipeline when the LLM fails (safety filters, empty responses, etc.).
+
+        Args:
+            message: The user's message text.
+
+        Returns:
+            Tuple of ``(classification, confidence)``.
+        """
+        msg = message.strip().lower()
+
+        # ---- Greetings / Small Talk ----
+        greeting_patterns = [
+            r"^(hi|hello|hey|heya|yo|good\s*morning|good\s*afternoon|good\s*evening)[\s!.,]*$",
+            r"^(thanks|thank\s*you|thx|ty|tyvm|ok|okay|bye|goodbye|see\s*you)[\s!.,]*$",
+            r"^(how\s*are\s*you|what'?s\s*up|howdy|sup|how\s*is\s*it\s*going)[\s!.,]*$",
+        ]
+        for pattern in greeting_patterns:
+            if re.match(pattern, msg):
+                return "greeting_only", 0.85
+
+        # Greeting followed by more content (e.g., "thanks, that helped")
+        if re.match(r"^(thanks|thank\s*you|thx|hi|hello|hey)\b", msg):
+            return "greeting_only", 0.75
+
+        # ---- Bot Questions ----
+        bot_patterns = [
+            r"^(what|who)\s+(are|is)\s+you",
+            r"what\s+(can|do)\s+you\s+do",
+            r"how\s+(do|can)\s+(you|i)\s+(work|use)",
+            r"tell\s+me\s+about\s+(yourself|you)",
+            r"what\s+is\s+your\s+(name|purpose)",
+        ]
+        for pattern in bot_patterns:
+            if re.search(pattern, msg):
+                return "bot_question", 0.80
+
+        # ---- Out of Domain (math, jokes, non-HR) ----
+        out_of_domain_patterns = [
+            r"^what\s+is\s+\d+\s*[\+\-\*\/\^]\s*\d+",           # "what is 1 + 1"
+            r"^\d+\s*[\+\-\*\/\^]\s*\d+",                         # "1 + 1"
+            r"^(calculate|compute|solve|evaluate)\b",             # math commands
+            r"\b(joke|funny|pun|riddle)\b",                      # jokes
+            r"^(tell\s+me\s+a\s+joke|make\s+me\s+laugh)",        # joke requests
+            r"\b(weather|news|sports|stock|crypto|bitcoin)\b",   # non-HR topics
+            r"what\s+is\s+the\s+(capital|population|weather)",    # general knowledge
+            r"^(who|what|where|when)\s+(is|was|are|were)\s+(the|a)\s+(president|king|queen|prime\s*minister)",  # non-HR
+        ]
+        for pattern in out_of_domain_patterns:
+            if re.search(pattern, msg):
+                return "out_of_domain", 0.80
+
+        # ---- Default: treat as HR question ----
+        return "hr_question", 0.60

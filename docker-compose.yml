@@ -40,9 +40,10 @@ services:
       context: ./frontend
     container_name: hr-agent-frontend
     ports:
-      - "8501:8501"
+      - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
 
   adminer:
     image: adminer:4.8.1
