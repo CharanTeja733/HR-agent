@@ -19,6 +19,14 @@ from app.schemas.document import (
 )
 from app.schemas.feedback import FeedbackCreate, FeedbackResponse
 from app.schemas.message import MessageCreate, MessageResponse
+from app.schemas.query import (
+    PipelineSteps,
+    QueryHealthResponse,
+    QueryRequest,
+    QueryTestResponse,
+    RetrievedChunkDetail,
+    SourceDetail,
+)
 from app.schemas.search import (
     SearchHealthResponse,
     SearchRequest,
@@ -68,4 +76,11 @@ __all__ = [
     "SearchResult",
     "SearchResponse",
     "SearchHealthResponse",
+    # query
+    "PipelineSteps",
+    "QueryHealthResponse",
+    "QueryRequest",
+    "QueryTestResponse",
+    "RetrievedChunkDetail",
+    "SourceDetail",
 ]

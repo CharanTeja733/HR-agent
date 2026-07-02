@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     EMBEDDING_BATCH_SIZE: int = 50
     ALLOWED_FILE_TYPES: list[str] = ["pdf", "docx", "txt"]
 
+    # RAG Pipeline
+    TOP_K_RETRIEVAL: int = 5
+    MIN_RETRIEVAL_SCORE: float = 0.5
+    HIGH_CONFIDENCE_THRESHOLD: float = 0.75
+    MEDIUM_CONFIDENCE_THRESHOLD: float = 0.50
+    LOW_CONFIDENCE_THRESHOLD: float = 0.30
+    MAX_CONVERSATION_HISTORY: int = 6
+    MAX_COMPLETION_TOKENS: int = 1024
+    RESPONSE_TEMPERATURE: float = 0.3
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
