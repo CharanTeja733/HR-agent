@@ -449,7 +449,13 @@ class GeminiService:
                     getattr(response.usage_metadata, "total_token_count", 0),
                 )
 
-            return response.text
+            text = response.text
+            if not text:
+                raise RuntimeError(
+                    "Gemini returned an empty response (possibly blocked "
+                    "by safety filter or no candidates generated)"
+                )
+            return text
 
         return await self._call_with_retry(
             _do_generate,
@@ -572,11 +578,11 @@ class GeminiService:
         if classification not in valid_categories:
             logger.warning(
                 "Unexpected classification '%s' for message: %s. "
-                "Defaulting to 'out_of_domain'.",
+                "Defaulting to 'hr_question'.",
                 classification,
                 message[:100],
             )
-            return "out_of_domain"
+            return "hr_question"
 
         return classification
 

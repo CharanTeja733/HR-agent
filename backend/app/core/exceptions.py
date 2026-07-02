@@ -109,3 +109,17 @@ class GeminiGenerationError(GeminiAPIError):
 
 class GeminiConfigurationError(GeminiAPIError):
     """Raised when Gemini is misconfigured (invalid API key, bad model name, etc.)."""
+
+
+# ---------------------------------------------------------------------------
+# Classification-specific exceptions
+# ---------------------------------------------------------------------------
+
+
+class ClassificationError(Exception):
+    """Raised when query classification fails."""
+
+    def __init__(self, message: str, original_error: Exception | None = None):
+        self.message = message
+        self.original_error = original_error
+        super().__init__(self.message)

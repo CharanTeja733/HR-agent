@@ -1,3 +1,8 @@
+from app.schemas.classify import (
+    ClassifyRequest,
+    ClassifyResponse,
+    ConversationMessage,
+)
 from app.schemas.common import HealthResponse, UserRole
 from app.schemas.auth import RefreshResponse, TokenResponse, UserLogin, UserRegister
 from app.schemas.document import (
@@ -24,6 +29,10 @@ from app.schemas.session import SessionResponse
 from app.schemas.user import UserCreate, UserResponse
 
 __all__ = [
+    # classify
+    "ClassifyRequest",
+    "ClassifyResponse",
+    "ConversationMessage",
     # common
     "UserRole",
     "HealthResponse",
