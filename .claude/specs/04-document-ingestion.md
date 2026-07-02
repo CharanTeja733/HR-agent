@@ -1,12 +1,8 @@
-Got it. I'll follow this layered architecture for all future features. Let me first show the updated Feature 4 with the new structure, then we'll use this for all subsequent features.
-
----
-
 # Feature 4: Document Ingestion Pipeline (Updated Architecture)
 
 ## 1. Overview
 
-Build the document ingestion pipeline that takes HR policy documents (PDF, DOCX, TXT), parses them, splits into chunks, generates embeddings using Gemini `text-embedding-004`, and stores them in PostgreSQL with pgvector.
+Build the document ingestion pipeline that takes HR policy documents (PDF, DOCX, TXT), parses them, splits into chunks, generates embeddings using Gemini `gemini-embedding-001`, and stores them in PostgreSQL with pgvector.
 
 This establishes the **knowledge base** for the HR Q&A Agent.
 
@@ -398,7 +394,7 @@ Add settings:
 MAX_FILE_SIZE_MB: int = 20
 CHUNK_SIZE: int = 1000
 CHUNK_OVERLAP: int = 200
-EMBEDDING_MODEL: str = "text-embedding-004"
+EMBEDDING_MODEL: str = "gemini-embedding-001"
 EMBEDDING_DIMENSIONS: int = 768
 EMBEDDING_BATCH_SIZE: int = 50
 ALLOWED_FILE_TYPES: list = ["pdf", "docx", "txt"]
@@ -467,7 +463,7 @@ All in `requirements.txt`:
 - **Services return dicts**: Never HTTP responses — framework-agnostic
 - **Repositories handle all SQL**: No raw queries in services or routes
 - **Utility functions are pure**: No database or framework dependencies
-- **Embedding model fixed**: `text-embedding-004`, 768 dimensions
+- **Embedding model fixed**: `gemini-embedding-001`, 768 dimensions
 - **Access control**: Only `hr_admin` role can manage documents
 - **Duplicate handling**: Uploading same filename replaces old chunks
 - **Transaction safety**: Rollback all chunks if any part fails
@@ -508,7 +504,7 @@ All in `requirements.txt`:
 - [ ] Text chunked with 1000 char size, 200 char overlap
 - [ ] Section detection works for common heading patterns
 - [ ] Page numbers tracked from PDF markers
-- [ ] Gemini `text-embedding-004` embeddings generated (768-dim)
+- [ ] Gemini `gemini-embedding-001` embeddings generated (768-dim)
 - [ ] Chunks stored in `hr_documents` with correct metadata
 - [ ] Duplicate source upload replaces old chunks
 - [ ] Only hr_admin can upload/delete
