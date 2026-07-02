@@ -1,4 +1,9 @@
-from app.core.deps import get_current_active_user, get_current_user, oauth2_scheme
+from app.core.deps import (
+    get_current_active_user,
+    get_current_user,
+    get_token,
+    security_scheme,
+)
 from app.core.exceptions import (
     AppException,
     DuplicateException,
@@ -24,7 +29,8 @@ __all__ = [
     "decode_token",
     "verify_token_type",
     # deps
-    "oauth2_scheme",
+    "security_scheme",
+    "get_token",
     "get_current_user",
     "get_current_active_user",
     # exceptions

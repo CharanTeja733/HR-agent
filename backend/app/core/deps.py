@@ -3,7 +3,7 @@
 import logging
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import ExpiredSignatureError, JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +15,10 @@ from app.core.security import decode_token, verify_token_type
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# OAuth2 scheme — extracts Bearer token from Authorization header
+# HTTPBearer scheme — extracts Bearer token from Authorization header
 # ---------------------------------------------------------------------------
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+security_scheme = HTTPBearer()
 
 # ---------------------------------------------------------------------------
 # Dependencies
@@ -26,7 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Decode the access token and return the authenticated user.
@@ -34,6 +34,8 @@ async def get_current_user(
     Raises 401 for invalid/expired tokens or missing users.
     Raises 403 for deactivated accounts.
     """
+    token = credentials.credentials
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -86,6 +88,17 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+) -> str:
+    """Extract the raw Bearer token string from the Authorization header.
+
+    Useful for endpoints that need the token itself (e.g. refresh)
+    rather than the decoded user.
+    """
+    return credentials.credentials
 
 
 async def get_current_active_user(

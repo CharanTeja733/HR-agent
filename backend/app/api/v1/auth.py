@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, oauth2_scheme
+from app.core.deps import get_current_user, get_token
 from app.database import get_db
 from app.models import User
 from app.schemas.auth import RefreshResponse, TokenResponse, UserLogin, UserRegister
@@ -77,7 +77,7 @@ async def get_me(
 
 @router.post("/refresh")
 async def refresh(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(get_token),
     db: AsyncSession = Depends(get_db),
 ):
     """Exchange a valid refresh token for a new access token."""

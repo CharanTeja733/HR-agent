@@ -155,3 +155,95 @@ class DocumentRepository(BaseRepository[HRDocument]):
             "largest_document": largest_document,
             "last_ingested": last_ingested,
         }
+
+    # ------------------------------------------------------------------
+    # Vector search
+    # ------------------------------------------------------------------
+
+    async def search_similar(
+        self,
+        query_embedding: list[float],
+        access_levels: list[str],
+        top_k: int = 5,
+        min_score: float = 0.5,
+    ) -> list[dict]:
+        """Perform cosine similarity search using pgvector.
+
+        Parameters
+        ----------
+        query_embedding : list[float]
+            768-dimensional embedding vector for the query.
+        access_levels : list[str]
+            Allowed access levels (e.g. ``["all", "manager"]``).
+        top_k : int
+            Maximum number of results to return.
+        min_score : float
+            Minimum similarity score (0.0 to 1.0).
+
+        Returns
+        -------
+        list[dict]
+            Each dict has keys: id, content, source, page, section, score.
+            Results are ordered by similarity score descending.
+        """
+        # Format the embedding as a pgvector-compatible literal string
+        embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+
+        # NOTE: ``\:`` escapes colons in SQLAlchemy text() so that the
+        # PostgreSQL ``::vector`` cast operator is preserved literally.
+        query = text(r"""
+            SELECT
+                id,
+                content,
+                source,
+                page,
+                section,
+                1 - (embedding <=> :embedding\:\:vector) AS score
+            FROM hr_documents
+            WHERE
+                access_level = ANY(:access_levels)
+                AND 1 - (embedding <=> :embedding\:\:vector) >= :min_score
+            ORDER BY embedding <=> :embedding\:\:vector
+            LIMIT :top_k
+        """)
+
+        result = await self.db.execute(
+            query,
+            {
+                "embedding": embedding_str,
+                "access_levels": access_levels,
+                "min_score": min_score,
+                "top_k": top_k,
+            },
+        )
+
+        return [
+            {
+                "id": row.id,
+                "content": row.content,
+                "source": row.source,
+                "page": row.page,
+                "section": row.section,
+                "score": float(row.score),
+            }
+            for row in result
+        ]
+
+    async def get_total_indexed_count(self) -> int:
+        """Return the total number of chunks in ``hr_documents``."""
+        result = await self.db.execute(
+            select(func.count(HRDocument.id))
+        )
+        return result.scalar_one()
+
+    async def check_vector_index_exists(self) -> bool:
+        """Check whether the IVFFlat index on ``hr_documents.embedding`` exists."""
+        query = text("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM pg_indexes
+                WHERE indexname = 'idx_hr_documents_embedding'
+            )
+        """)
+        result = await self.db.execute(query)
+        return result.scalar_one()
