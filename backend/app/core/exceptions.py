@@ -73,3 +73,39 @@ class DocumentNotFoundError(IngestionError):
     def __init__(self, source: str):
         msg = f"Document not found: {source}"
         super().__init__(msg, status_code=404)
+
+
+# ---------------------------------------------------------------------------
+# Gemini API exceptions (separate hierarchy — not HTTP-layer errors)
+# ---------------------------------------------------------------------------
+
+
+class GeminiAPIError(Exception):
+    """Base exception for Gemini API errors."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        original_error: Exception | None = None,
+    ):
+        self.message = message
+        self.status_code = status_code
+        self.original_error = original_error
+        super().__init__(self.message)
+
+
+class GeminiRateLimitError(GeminiAPIError):
+    """Raised when Gemini API rate limit is exceeded after all retries."""
+
+
+class GeminiEmbeddingError(GeminiAPIError):
+    """Raised when embedding generation fails after all retries."""
+
+
+class GeminiGenerationError(GeminiAPIError):
+    """Raised when text generation fails after all retries."""
+
+
+class GeminiConfigurationError(GeminiAPIError):
+    """Raised when Gemini is misconfigured (invalid API key, bad model name, etc.)."""

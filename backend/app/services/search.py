@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.repositories.document import DocumentRepository
-from app.utils.embedder import embed_texts
+from app.services.gemini import GeminiService
 
 
 class SearchService:
@@ -20,7 +20,7 @@ class SearchService:
 
     def __init__(self, db: AsyncSession, gemini_api_key: str) -> None:
         self.db = db
-        self.gemini_api_key = gemini_api_key
+        self.gemini_service = GeminiService(gemini_api_key)
         self.document_repo = DocumentRepository(db)
 
     # ------------------------------------------------------------------
@@ -50,14 +50,10 @@ class SearchService:
             access_levels = self._get_access_levels_for_role(user_role)
 
         # 2. Generate query embedding (RETRIEVAL_QUERY task type for search)
-        embeddings = await embed_texts(
-            [query],
-            api_key=self.gemini_api_key,
-            model=settings.EMBEDDING_MODEL,
+        query_embedding = await self.gemini_service.embed_single(
+            query,
             task_type="RETRIEVAL_QUERY",
-            output_dimensionality=settings.EMBEDDING_DIMENSIONS,
         )
-        query_embedding = embeddings[0]
 
         # 3. Similarity search (access control enforced in SQL)
         results = await self.document_repo.search_similar(

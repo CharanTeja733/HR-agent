@@ -18,9 +18,11 @@ from app.core.exceptions import (
     DocumentNotFoundError,
     EmbeddingGenerationError,
     EmptyDocumentError,
+    GeminiEmbeddingError,
     UnsupportedFileTypeError,
 )
 from app.repositories.document import DocumentRepository
+from app.services.gemini import GeminiService
 from app.utils.chunker import (
     _find_page_markers,
     assign_page_to_chunks,
@@ -28,7 +30,6 @@ from app.utils.chunker import (
     chunk_text,
     detect_sections,
 )
-from app.utils.embedder import embed_texts
 from app.utils.parser import extract_text, validate_file_type
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class IngestionService:
 
     def __init__(self, db: AsyncSession, gemini_api_key: str) -> None:
         self.db = db
-        self.gemini_api_key = gemini_api_key
+        self.gemini_service = GeminiService(gemini_api_key)
         self.document_repo = DocumentRepository(db)
 
     # ------------------------------------------------------------------
@@ -101,14 +102,13 @@ class IngestionService:
         # 7. Embed
         try:
             contents = [c["content"] for c in chunks]
-            embeddings = await embed_texts(
-                contents,
-                api_key=self.gemini_api_key,
-                model=settings.EMBEDDING_MODEL,
+            embeddings = await self.gemini_service.embed_texts(
+                texts=contents,
                 task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=settings.EMBEDDING_DIMENSIONS,
                 batch_size=settings.EMBEDDING_BATCH_SIZE,
             )
+        except GeminiEmbeddingError as exc:
+            raise EmbeddingGenerationError(attempts=3) from exc
         except EmbeddingGenerationError:
             raise
         except Exception as exc:
